@@ -26,16 +26,16 @@
                 >
                 </el-input>
             </el-form-item>
-            <el-form-item prop="code">
-                <el-input
-                    v-model="loginForm.code"
-                    auto-complete="off"
-                    placeholder="验证码"
-                    style="width: 60%"
-                    @keyup.enter.native="handleLogin"
-                >
-                </el-input>
-                <div class="login-code">
+            <el-form-item prop="code" class="login-code-verify">
+                <div class="code-wrapper">
+                    <el-input
+                        v-model="loginForm.code"
+                        auto-complete="off"
+                        placeholder="验证码"
+                        style="width: 60%"
+                        @keyup.enter.native="handleLogin"
+                    >
+                    </el-input>
                     <img :src="codeUrl" @click="getCode" class="login-code-img" />
                 </div>
             </el-form-item>
@@ -58,14 +58,21 @@
 </template>
 
 <script lang="ts" setup>
-    import { reactive, ref } from 'vue'
+    import { getCodeImg, login } from '@/api/login'
+    import { ElMessage } from 'element-plus'
+    import { onMounted, reactive, ref } from 'vue'
+    import { useRouter } from 'vue-router'
+    import { useUserStore } from '@/stores/user'
     const loading = ref(false)
+    const codeUrl = ref('')
     const loginFormRef = ref()
-    const codeUrl = ref()
+    const router = useRouter()
+    const userStore = useUserStore()
     const loginForm = reactive<LoginForm>({
         username: '',
         password: '',
         code: '',
+        uuid: '',
         rememberMe: false,
     })
     const loginRules = {
@@ -80,12 +87,45 @@
         code: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
     }
 
-    const getCode = () => {}
+    const getCode = async () => {
+        getCodeImg().then((res: any) => {
+            console.log(res)
+            codeUrl.value = URL.createObjectURL(res.data)
+        })
+    }
 
-    const handleLogin = () => {}
+    onMounted(() => {
+        getCode()
+    })
+
+    const handleLogin = () => {
+        loginFormRef.value.validate((valid: boolean) => {
+            if (!valid) {
+                return false
+            }
+            loading.value = true
+            login(loginForm)
+                .then((res: any) => {
+                    loading.value = false
+                    if (res.data.code == 0) {
+                        ElMessage.error(res.data.message)
+                        return
+                    }
+                    if (res.data.code !== 200) {
+                        return
+                    }
+
+                    userStore.setAuth(true)
+                    router.push({ name: 'Home' })
+                })
+                .finally(() => {
+                    loading.value = false
+                })
+        })
+    }
 </script>
 
-<style>
+<style lang="scss" scoped>
     .loginStyle {
         display: flex;
         justify-content: center;
@@ -108,15 +148,15 @@
             }
         }
     }
-    .login-code {
-        width: 35%;
-        height: 40px;
-        float: right;
-        img {
-            vertical-align: middle;
-        }
+    .code-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
     }
+
     .login-code-img {
         height: 40px;
+        width: 35%;
     }
 </style>

@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '@/views/LoginView.vue'
+import MyView from '@/views/MyView.vue'
+import { useUserStore } from '@/stores/user'
 
 const routes = [
     {
@@ -11,6 +13,11 @@ const routes = [
         name: 'Login',
         component: LoginView,
     },
+    {
+        path: '/home',
+        name: 'Home',
+        component: MyView,
+    },
 ]
 
 const router = createRouter({
@@ -20,7 +27,8 @@ const router = createRouter({
 
 const whiteList: string[] = ['/login']
 router.beforeEach((to, from) => {
-    if (whiteList.includes(to.path)) {
+    const userStore = useUserStore()
+    if (whiteList.includes(to.path) || userStore.isLogin) {
         return
     }
 
